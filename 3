@@ -1,0 +1,313 @@
+#Seminar 1 Analiza datelor
+
+sem1<-Date
+summary(sem1)
+
+install.packages("psych")
+library(psych)
+
+describe(sem1[,-1])
+#coef de variatie
+install.packages("raster")
+library(raster)
+
+cv(sem1$X1)
+apply(sem1[,-1], 2,cv)
+
+#outlier
+boxplot(sem1$X1,col="pink", main="Boxplot x1")
+OUTLIER<-boxplot(sem1$X1,plot=F)$out
+#EXCLUDEM VECTORUL din setul de date
+sem2<-sem1[-which(sem1$X1 %in% OUTLIER),]
+#histograma
+window()
+hist(sem1$X1, freq=FALSE,col="aquamarine2",main="Histograma X1")
+lines(density(sem1$X1),col="red",lwd=3)#afisare densitate de probabilitate
+
+#SEMINAR2
+
+#Histograma
+hist(sem1$X1,col='pink', main="Histograma x1",freq=F)
+lines(ln(sem1$X1),col='red',lwd=3)
+
+#dependenta dintre doua variabile
+plot(sem1$X4,sem1$X2,col='blue')
+abline(ln(sem1$X2~sem1$X4),col='red')
+
+#scatte plott
+install.packages("ggplot2")
+library(ggplot2)
+ggplot(sem1, aes(x=X4, y=X2))+geom_point()
++geom_text(label=sem1$Region, color='red', nudge_x=0.25, nudge_y=0.25
+           check_overlap=T)
+#standardizare date
+# x_std=(x1-medie x)/dispersie de x
+
+
+sem1_std=scale(sem1[-1],scale=T)
+View(sem1_std)
+
+#sd si media pentru datele standardizate
+install.packages("raster")
+library(raster)
+
+apply(sem1_std,2,std)#sd=1
+round(apply(sem1_std,2,mean),5) #medie=0
+
+#matrice de covarianta si corelatie
+#covarinata masoara directia dintre cele doua variabile si corelatia masoara intensitatea dintre cele doua variabile
+# coef de corelatie ia mereu valori intre -1 si 1
+cov(sem1_std)
+core(sem1_std)
+
+#Construirea unei funcții care transformă variabilele din matricea datelor prin împărțirea
+#fiecărei variabile la media sa. Aplicați funcția construită anterior pentru variabila X1, apoi pentru toată matricea de date
+functie=function(x){
+  a=x/mean(x)
+  return (a)
+}
+functie(sem1$X1)
+date_noi=apply(date[-1],2,functie)
+cor(sem1[-1])
+cor(date_noi)
+
+cov(sem1[-1])
+cov(date_noi)
+#covarianta este diferita fata matriea de corelatie care ramane la fel
+#Calculați matricea produselor încrucișate pentru matricea de date (produs între matricea
+#de date si transpusa sa). Ce fel de matrice este?
+
+a=as.matrix(sem1[-1])
+x=t(a)%*%a
+#sau
+crossprod(a)
+
+#Generați (cu funcția rnorm) 6000 de valori dintr-o distribuție normală de medie 3 și
+#abatere standard 0.2. Transformați valorile generate într-o matrice de date cu 1000 de
+#linii și 6 coloane. Calculați matricea de covarianță a variabilelor centrate (tot funcţia
+#scale) și matricea produselor încrucișate pentru variabilele centrate. Ce observați?
+v<-rnorm(6000,mean=3,sd=0.2)
+
+v=matrix(v,nrow=1000,ncol=6)
+v_centrat=scale(v,center=T,scale=F)
+cov(v_centrat)
+pi=crossprof(v_centrat)
+pi=pi/999#(n-1=1000-1)
+
+#Seminar 3
+
+date_std=scale(sem1[-1], scale=T)
+
+#matricea de covarianţă a datelor standardizate.
+c<-cov(date_std)
+#Aplicarea funcţiei eigen
+eigen(c)
+val<-eigen(c)$values
+val
+vect<-eigen(c)$vectors
+vect 
+
+#norma unui vector
+v1<-vect[,1]
+v1
+n1<-sqrt(sum(v1*v1))
+n1
+#norma vector 2
+
+v2<-vect[,2]
+v2
+n2<-sqrt(sum(v2*v2))
+n2
+
+#combinatii liniare intre datele standardizade si vectorii proprii
+
+c1<-date_std%*%v1
+c1
+c2<-date_std%*%v2
+c2
+
+var(c1)
+val
+var(c2)
+
+#Matricea transpusă a matricii care conține vectorii proprii de mai sus
+transpusa<-t(vect)
+round(transpusa%*%c%*%vect,3)
+
+#analiza corelatiilor
+cor(sem1[,-1])#default Pearson
+cor(sem1[,-1], method="spearman")
+
+cor.test(sem1$X2,sem1$X4,method="pearson")
+install.packages("Hmisc")
+library(Hmisc)
+
+M=rcorr(as.matrix(sem1[,-1]))
+M
+
+#testarea distributiei datelor
+#ipoteza alternativa h1:datele sunt normal distribuite
+#ipoteza alternativa h1:datele nu sunt normal distribuite
+#resping ipoteza NULA =>dat3ele4 nu sunt normal distribuite
+shapiro.test(sem1$X2)
+shapiro.test(sem1$X4)
+
+
+install.packages("ggpubr")
+library(ggpubr)
+ggscatter(sem1,x="X4", y="X2",add="reg.line", conf.int=T,
+          cor.coef=T,cor.methid="spearman",
+          xlab="X4", ylab="X2")
+#exista o relatie directa intre cele doua variabile
+
+#Folosirea funcţiei corrplot pentru reprezentări grafice ale matricii de corelaţie.
+install.packages("corrplot")
+library(corrplot)
+corrplot(M$r)
+corrplot(M$r, method="square", type="upper")
+
+corrplot(M$r, method="square", type="lower")
+
+corrplot(M$r, method="pie", type="lower")
+
+corrplot(M$r, method="number")
+
+
+install.packages("PerformanceAnalytics")
+library(PerformanceAnalytics)
+
+chart.Correlation(sem1[-1],hist=T)
+
+
+#Seminar 4
+# !!!!TEMA: pt tema 1 cautam o serie dedate cu minim 200 de observatii
+date2<-Date_ACP
+cor(date2[-1])
+
+#elimin pe A12 si A2 din setul de date
+date3<-cbind(date2[,2:6],date2[,9:12])
+date3_std=scale(date3,scale=T)
+
+
+acp=princomp(date3_std,cor=T)
+acp
+
+sdev=acp$sdev
+val=sdev*sdev
+
+procent_info=(val/sum(val))*100
+procent_cumulat=cumsum(procent_info)
+x=data.frame(sdev,procent_info,procent_cumulat)
+view(x)
+
+#screeplot
+screeplot=prcomp(date3_std)
+plot(screeplot,type="l",main="screeplot",col="red")
+
+#4 de componente principale
+
+#criteriul lui Kaiser-valorile proprii =>1
+#3 componente principale
+
+
+
+#criteriul procentul de acoperire - procent cumulat
+#70-75-80%
+#3 comp principale (81.72)
+
+#Pastram in final de analiza 3 componente principale
+#vectorii proprii
+a=acp$loadings
+a
+
+
+print(acp$loadings,cutoff=0.0001)
+
+#forma generala a componentelor princiaple
+
+#w1= 0.16*RC+0.08*ROE+0.07*ROA-0.25*LC+0.46*GIG-0.22*a3-0.45*SP+0.45AFT+0.46*SF
+#w2=0.48*RC+0.53*ROE+0.55*ROA+0.28*LC-0.22GIG+0.23*A3+0.095*SP+0.08*AFT+0.05*SF
+#w3=0.19*RC+0.19*ROE+0.22*ROA-0.56*LC-0.079*...
+
+#SCORURILE PRINCIPALE
+#inlocuim datele std in forma generala
+#a componentei principale
+
+c=acp$scores[,1:3]
+c
+
+rownames(c)=date$Simbol
+
+cor(c)
+round(cor(c),10)
+#componentele principale sunt corelate doua cate doua
+
+#pierderea informastionala =100%-81.72%=18.28%
+#matricea factor - matricea de corelatie dintre variabilele 
+#originale si componentele principale
+
+matrice_factor=cor(date3_std,c)
+
+install.packages("corrplot")
+library(corrplot)
+corrplot(matrice_factor, method="number")
+#componenta 1 se coreleaza puternic cu GIG,SF,AFT SI SP
+#COMP PRINCIPALA 1 SE POATE NUMI INDATORARE
+
+
+#Comp 2 se coreleaza cu RC,ROE,ROA si o poate numi rentabilitate
+#Comp 3 se coereleaza  cu LC,A3 si o putem numi Lichiditate3
+
+#seminar 5
+windows()
+cerc=seq(0,2*pi,lenght=100)
+plot(cos(cerc), sin(cerc), type="l", col="blue", xlab="w1",ylab="w2")
+text(matrfactor[,1], matrfactor[,2], rownames(matrfactor),xcol="red",cex=0.7)
+matrfactor
+install.packages("FactoMineR")
+
+library(FactoMineR)
+cp=PCA(date3_std)
+
+
+
+#s5
+biplot(c2[,1:2],acp$loadings[,1:2], cex=c(0.7,0.9))
+#ox e pt w1
+#axa paralele e tot pt w1
+
+
+install.packages("factoextra")
+library(factoextra)
+
+fviz_pca_biplot(acp,repel=TRUE,col.var="#2E9FDF",col.ind="#696969")
+fviz_pca_var(acp,col.var="cos2", gradient.cols=c("red","yellow","green"), repel=TRUE)# sa nu scrie etichetele una peste alta
+#cos 2 arata calitatea reprezentari datelor pe axa
+
+
+fviz_pca_var(acp,col.var="contrib", gradient.cols=c("red","yellow","green"), repel=TRUE)
+#contributia variabilelor la componenta principala
+
+
+summary(cp)
+#individuals
+# prima componenta 1 detine din 36,86% din componenta totala,  componenta 2 detine 20,46% din cea mai ramas
+#Dim1,2,3 scorurile principale
+#ctr contributia fiecare observatie la componentele principale
+#cos2 calitatea reprezentari pe axa
+
+
+#variables
+ # dim elementele matrici factor
+#ctr contributia fiecare observatie la componentele principale
+#cos2=dim^2
+
+#calcul pt contributii RC
+#2.547=0.084/(0084+0.22+0.02+.....+0.703)*100
+fviz_pca_ind(acp,col.ind ="cos2", gradient.cols=c("red","yellow","green"), repel=TRUE)
+
+fviz_contrib(acp, choice="var",axes= 1:2)
+
+#screeplot
+
+fviz_eig(acp,addlabels=TRUE, ylim=C(0,50))
