@@ -1,0 +1,64 @@
+definire de variabile categoriale
+?factor()
+#Seminar8 - generare variabile firme
+n <-800
+Id<-1:800
+set.seed(1044)
+
+#alternativa sector<-sample(1:3, 800,replace=T,pro=c(0.2,0.5,0.3))
+sector<-sample(c("Agri","Constr","Turism"), 800,replace=T,pro=c(0.2,0.5,0.3))
+sector<-factor(sector)
+levels(sector)
+levels(sector)<-c("A","C","T")
+table(sector)
+#generare variabila dimensiune
+set.seed(44)
+dim<-sample(c("mici","medii","mari"),n,replace=T,prob=c(0.6,0.3,0.1))
+dim<-factor(dim)
+table(dim)
+df<-data.frame(Id,sector,dim)
+
+#VARIABILE VENIT SI INVESTITII GENERARE
+#Mici: V~N(180000,3000),i~N(50000,2500)
+#Medii: V~N(250000,3200), i~N(90000,3500)
+#Mare: V~N(500000,4800),i~N(170000,4000)
+
+#pentru firmelew mici V~N(180000,3000),i~N(50000,2500)
+?subset()
+MICI<-subset(df,dim=="mici")#levels(dim)[3]
+MEDII<-subset(df,dim=="medii")
+MARII<-subset(df,dim=="mari")
+#alternatic which
+MICI<-df[which(dim=="mici"),]
+dim(MICI)
+set.seed(1044)
+MICI$Venit<-rnorm(dim(MICI)[1],180000,3000)
+MICI$Investitii<-rnorm(dim(MICI)[1],50000,2500)
+
+#firme medii
+MEDII$Venit<-rnorm(dim(MEDII)[1],250000,3200)
+MEDII$Investitii<-rnorm(dim(MEDII)[1],90000,3500)
+
+#FIRME MARI
+MARII$Venit<-rnorm(dim(MARII)[1],500000,4800)
+MARII$Investitii<-rnorm(dim(MARII)[1],170000,4000)
+#DATA FRAME COMPLETE
+df<-rbind(MICI,MEDII,MARII)
+#IDENTIFICATI CATE FIRME MARI SUNT IN Agricultura
+dfmariA<-subset(df,dim=="mari" & sector=="A")
+table(df$sector)
+#Tema-PAS2
+# Generarea costurilor pentru firmele mici și mari
+set.seed(1044)
+dfmici <- subset(df, dim == "mici") 
+dfmici$Costuri <- rnorm(nrow(dfmici), mean = 50000, sd = 2500) 
+
+set.seed(1044)
+dfmari <- subset(df, dim == "mari") 
+dfmari$Costuri <- rnorm(nrow(dfmari), mean = 170000, sd = 4000) 
+
+dfmici$Rentabilitate <- ((dfmici$Venit - dfmici$Costuri) / dfmici$Costuri) * 100
+dfmari$Rentabilitate <- ((dfmari$Venit - dfmari$Costuri) / dfmari$Costuri) * 100
+
+head(dfmici)  
+head(dfmari) 
