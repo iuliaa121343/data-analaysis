@@ -1,0 +1,196 @@
+#Proiect Companie:Nvidia, Competitor principal:Advanced Micro Devices, Indice bursier:S&P 500
+#Librari utilizate in proiect
+library(corrplot)
+library(moments)
+
+#preluare date din fisier text
+#Punerea datelor intiale intr-un date frame
+setwd("C:\\Users\\win\\OneDrive\\an 2\\micro proiect nvidia")
+date_initiale<- read.table("date.txt", header = TRUE, sep = "\t", dec = ".")
+
+#CALCUL RENTABILITATI si creare unui data frame cu rentabilitatile calculate
+# calcul rentabilitate pentru Nvidia
+rentabilitate_PNVDA <- c(250)
+rentabilitate_PNVDA[1]=0
+
+for (j in 2:length(date_initiale$PNVDA)) {
+  rentabilitate_PNVDA[j] <- (date_initiale$PNVDA[j] / date_initiale$PNVDA[j - 1]) - 1
+}
+
+#calcul rentabilitate pentru AMD
+rentabilitate_PAMD <- c(250)
+rentabilitate_PAMD[1]=0
+
+for (j in 2:length(date_initiale$PAMD)) {
+  rentabilitate_PAMD[j] <- (date_initiale$PAMD[j] / date_initiale$PAMD[j - 1]) - 1
+}
+
+# calcul rentabilitate pt SP500
+rentabilitate_SP <- c(250)
+rentabilitate_SP[1]=0
+
+for (j in 2:length(date_initiale$SP)) {
+  rentabilitate_SP[j] <- (date_initiale$SP[j] / date_initiale$SP[j - 1]) - 1
+}
+
+# creare data frame cu rentabilitatile firmelor si indicelor bursier
+rentabilitate<-data.frame(rentabilitate_PNVDA,rentabilitate_PAMD,rentabilitate_SP)
+
+
+#sumarry statistics pentru  preturi si rentabilitati
+#Rentabilitatiea Nvidia a fost cuprinsa in intervalul [-0.059072; 0.243696] Rrntabilitatea AMD  a fost cuprinsa in [-0.092203; 0.126281], iar SP in [-0.0200412; 0.0228408].
+#Interalul pentru rentabilitatea firmei Nvidia este cel mai mare si variaza cel mai mult , ceea ce inseamna ca exista un risc mai mare asociat cu investitiii in Nvidia de cat in SP500 si AMD
+#Adica rezulta faptul ca AMD, competitorul firmei  Nvidiei,  are un risc mai mic de cat aceasta in ceea ce priveste investitiile, facand mai atragatoare pentru investitori
+#Pentru Nvidia  mediana  este 0.004294, pentru Amd este de  0.001281 si pentru SP este de 0.0008355.Nvdia.
+#sugereaza ca peste jumate de valori sau situat pesre mediana, avand o rentabilitatea mai mare decat celeletate doua studiate, inclusiv competitorul ei.
+summaryRent<-summary(rentabilitate)
+summaryPret<-summary(date_initiale[ ,-1])
+#Iar la preturi interalul cel mai mare de valori este pentru SP, ceea ce inseamna ca exista un risc mai mare de a investii indicele busrsier decat in  Nvidia sau AMD.
+#Intre preturile pentru Nvidia si Amd, AMD are un interval mai apropiat, ce sugereaza un risc mai mic de investire, facand-o mai atractiva pentru investitori
+#Mediana pentru sp este ceai mai apropiata de maxim, adica jumata de valoari se situeaza peste 4284 indica faptul că o parte semnificativă a perioadei analizate a avut o performanță pozitivă, mai buna decat AMD si Nvidia
+#Mediana Nvidia este mult mai mare de cea a firmei Amd ,  rezultand o performanta mai buna
+
+#CORELATII
+# Calculul matricei de corelație pentru prețurile acțiunilor, fără prima coloana adica data, 
+# Crearea grafic pentru matricea de corelație
+# Intre preturi exista o legatura puternica,intrucat facand parte din aceleasa domenii si avand aceasi activitate
+corel_preturi <- cor(date_initiale[, -1])
+rent <- cor(rentabilitate)
+# Crearea grafic pentru matricea de corelație
+corrplot(corel_preturi, method = "circle", type = "upper", main="Corelatie intre preturi")
+corrplot(rent, method = "circle", type = "upper", main="Corelatie intre rentabilitati")
+
+#Nvidia are o corelație mai mare cu prețurile indiceleui S&P 500 decât AMD, acest lucru  însemna că mișcările prețurilor Nvidia sunt mai strâns legate de mișcările prețurilor indicele bursier
+
+#MEDII,SD,CV,ASIMETRIE,APLATIZARE
+#medie rentabilitati
+mAMD<-mean(rentabilitate$rentabilitate_PAMD)
+mNVDA<-mean(rentabilitate$rentabilitate_PNVDA)
+mSP<-mean(rentabilitate$rentabilitate_SP)
+
+#medie  preturi
+medieAmd<-mean(date_initiale$PAMD)
+medieNVDA<-mean(date_initiale$PNVDA)
+medieSP<-mean(date_initiale$SP)
+
+#abateri standart cu preturile
+sd_amd<-sd(date_initiale$PAMD)
+sd_nvda<-sd(date_initiale$PNVDA)
+sd_sp<-sd(date_initiale$SP)
+
+#abatari standart rentabilitati
+sd_Ramd<-sd(rentabilitate$rentabilitate_PAMD)
+sd_Rnvda<-sd(rentabilitate$rentabilitate_PNVDA)
+sd_Rsp<-sd(rentabilitate$rentabilitate_SP)
+
+#coef de variatie pentru preturi
+cvAMD <- sd_amd / medieAmd
+cvNVDA <- sd_nvda/ medieNVDA
+cvSP <- sd_sp / medieSP
+
+#coeficient de variatie pentru rentabilitati
+cvRAMD <- sd_Ramd / mAMD
+cvRNVDA <- sd_Rnvda/ mNVDA
+cvRSP <- sd_Rsp / mSP
+
+#asimetrie pentru preturi
+sk_AMD<-skewness(date_initiale$PAMD)
+sk_PNVDA<-skewness(date_initiale$PNVDA)
+sk_SP<-skewness(date_initiale$SP)
+
+# asimetrie pentru rentabilitate
+sk_RAMD<-skewness(rentabilitate$rentabilitate_PAMD)
+sk_RPNVDA<-skewness(rentabilitate$rentabilitate_PNVDA)
+sk_RSP<-skewness(rentabilitate$rentabilitate_SP)
+
+#aplatizare pentru preturi initiale
+# coeficientul de aplatizare pentru preturile initiale pentru AMD este de 2.77, pentru Nvdia este de 1.71 si pentru SP 500 este de 2.12 si deci toate au o distributie platikurtica
+k_AMD<-kurtosis(date_initiale$PAMD)
+k_NVDA<-kurtosis(date_initiale$PNVDA)
+k_SP<-kurtosis(date_initiale$SP)
+
+#aplatizare pentru rentabilitati 
+# coeficientul de aplatizare pentru rentabilitate pentru AMD este de 5.22 deci are o distributie leptokurtica, pentru NVIDIA este de 18.08 deci are tot o distributie leptokurtica
+#coeficientul de aplatizare a rentabilitati Sp-ului este de 2.80 deci distributia este platikurtica
+k_RAMD<-kurtosis(rentabilitate$rentabilitate_PAMD)
+k_RNVDA<-kurtosis(rentabilitate$rentabilitate_PNVDA)
+k_RSP<-kurtosis(rentabilitate$rentabilitate_SP)
+
+#creare data frame cu statisticile
+#matrice  cu medie, abaterile standart, cv,aplatizare si asimetrie pentru rentabilitati
+statRent <- data.frame(
+  Mean = colMeans(rentabilitate),
+  SD = apply(rentabilitate, 2, sd),
+  CV = apply(rentabilitate, 2, function(x) sd(x) / mean(x)),
+  Skewness = apply(rentabilitate, 2, skewness),
+  Kurtosis = apply(rentabilitate, 2, kurtosis)
+)
+
+#Preturile AMD SI NVIDIA au coeficientul de asimetrie negativ, Indică faptul că coada distribuției este mai lungă în partea stângă și majoritatea datelor sunt concentrate în partea dreaptă a distribuției. Cu alte cuvinte, există mai multe valori mici decât cele mari
+#SP are coeficientul de asimetrie pozitiv, ceea ce ca inseamna majoritatea datelor sunt concentrate în partea stângă a distribuției, avand mai multe valori mari decat mici
+#deci  pretul SP  avand  o asimetrie pozitiva decat celelate doua rezulta ca poate aduce castiguri mai mari.AMD are coeficientul de asimetrie mai mare decat NVIDIA deci aduce castiguri mai mari.
+
+#matrice  cu medie, abaterile standart, scv,aplatizare si asimetrie pentru preturile initiale
+statPreturi <- data.frame(
+  Mean = colMeans(date_initiale[ ,-1]),
+  SD = apply(date_initiale[ ,-1], 2, sd),
+  CV = apply(date_initiale[ ,-1], 2, function(x) sd(x) / mean(x)),
+  Skewness = apply(date_initiale[ ,-1], 2, skewness),
+  Kurtosis = apply(date_initiale[ ,-1], 2, kurtosis)
+)
+
+
+#GRAFICE: HISTOGRAME, BOXPLOT,EVolutie
+#histograme preturi initiale in comparatie cu PRETUL SP500
+par(mfrow=c(2,1))
+hist(date_initiale$PAMD, main = "Distributia  pretului pentru AMD", col="purple2")
+hist(date_initiale$SP, main = "Distributia pretului  pentru S&P500", col="plum")
+
+par(mfrow=c(2,1))
+hist(date_initiale$PNVDA, main = "Distributia pretului pentru NVDIA", col="green3")
+hist(date_initiale$SP, main = "Distributia pretului  pentru S&P500", col="red4")
+
+# histograme rentabilitati in comparatie cu rentabilitatile SP500
+par(mfrow=c(2,1))
+hist(rentabilitate$rentabilitate_PAMD, main = "Distributia ratei rentabilitatii  pentru AMD", col="pink3")
+hist(rentabilitate$rentabilitate_SP, main = "Distributia ratei rentabilitatii pentru S&P500", col="orange3")
+
+par(mfrow=c(2,1))
+hist(rentabilitate$rentabilitate_PNVDA, main = "Distributia ratei rentabilitatii  pentru NVDIA", col="pink3")
+hist(rentabilitate$rentabilitate_SP, main = "Distributia ratei rentabilitatii pentru S&P500", col="orange3")
+
+#boxplot preturi initiale in comparatie cu SP
+par(mfrow=c(2,1))
+boxplot(date_initiale$PNVDA, col="seashell", xlab = "Boxplotul pretului pentru NViDiA", horizontal = TRUE)
+boxplot(date_initiale$SP, col="navajowhite1", xlab = "Boxplotul pretului  pentru S&P500", horizontal = TRUE)
+
+par(mfrow=c(2,1))
+boxplot(date_initiale$PAMD, col="blue", xlab = "Boxplotul pretului pentru NViDiA", horizontal = TRUE)
+boxplot(date_initiale$SP, col="red", xlab = "Boxplotul pretului  pentru S&P500", horizontal = TRUE)
+
+#boxplot rentabilitate , fiecare fiind vazuta in paralel cu rentabilitatea SP-ului
+par(mfrow=c(2,1))
+boxplot(rentabilitate$rentabilitate_PNVDA, col="cyan4", xlab = "Boxplotul ratei rentabilitatii  pentru NVIDIA", horizontal = TRUE)
+boxplot(rentabilitate$rentabilitate_SP, col="lavender", xlab = "Boxplotul ratei rentabilitatii  pentru S&P500", horizontal = TRUE)
+
+par(mfrow=c(2,1))
+boxplot(rentabilitate$rentabilitate_PAMD, col="magenta", xlab = "Boxplotul ratei rentabilitatii  pentru AMD", horizontal = TRUE)
+boxplot(rentabilitate$rentabilitate_SP, col="green1", xlab = "Boxplotul ratei rentabilitatii  pentru S&P500", horizontal = TRUE)
+
+#evolutie preturi initiale in perechi, fiecare fiind vizualizat impreuna cu SP500
+par(mfrow=c(2,1))
+ts.plot(date_initiale$SP,col="blue", main="Evolutie  pretului pentru SP")
+ts.plot(date_initiale$PAMD, col="orange",main="Evolutie pretului pentru AMD" )
+
+par(mfrow=c(2,1))
+ts.plot(date_initiale$SP,col="magenta", main="Evolutie  pretului pentru SP")
+ts.plot(date_initiale$PNVDA, col="purple",main="Evolutie pretului pentru NVIDIA")
+
+#evolutie rentabilitati in perechi, fiecare fiind vizualizat impreuna cu SP500
+par(mfrow=c(2,1))
+ts.plot(rentabilitate$rentabilitate_PAMD, main="Evolutia ratei rentabilitati pentru AMD",col="blue4")
+ts.plot(rentabilitate$rentabilitate_SP, col="orange4",main="Evolutia ratei rentabilitati pentru SP" )
+
+par(mfrow=c(2,1))
+ts.plot(rentabilitate$rentabilitate_PNVDA,col="magenta4", main="Evolutia ratei rentabilitati pentru NVIDIA")
+ts.plot(rentabilitate$rentabilitate_SP, col="yellow4",main="Evolutia ratei rentabilitati pentru SP")
