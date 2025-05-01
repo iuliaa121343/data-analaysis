@@ -1,0 +1,271 @@
+#ANALIZA FACTORIALA TEMA1
+library(corrplot)
+library(moments)
+
+date=set_de_date 
+#Cerinta 1 -eliminare outliers outlier_indices <- c() 
+outlier_indices <- c() 
+
+for (i in 2:ncol(date)) { 
+  if (is.numeric(date[[i]])) { 
+    col_outliers <- which(date[[i]] %in% boxplot.stats(date[[i]])$out)
+    outlier_indices <- c(outlier_indices, col_outliers) 
+  } 
+}
+
+outlier_indices <- unique(outlier_indices)  
+
+# set de date fara outliersi
+date1 <- date[-outlier_indices, ] 
+
+#Calculați indicatorii statistici
+dateStat<- data.frame( 
+  Mean = colMeans(date1[,-1]),
+  SD = apply(date1[,-1], 2, sd),
+  CV = apply(date1[,-1], 2, function(x) sd(x) / mean(x)),
+  Skewness = apply(date1[,-1], 2, skewness),
+  Kurtosis = apply(date1[,-1], 2, kurtosis) 
+) 
+
+dateSTD=scale(date1[-1],scale=T)
+#Matrice indicatori statistici pentru datele std
+dateStatSTD<- data.frame( 
+  Mean = colMeans(dateSTD[,-1]),
+  SD = apply(dateSTD[,-1], 2, sd),
+  CV = apply(dateSTD[,-1], 2, function(x) sd(x) / mean(x)),
+  Skewness = apply(dateSTD[,-1], 2, skewness),
+  Kurtosis = apply(dateSTD[,-1], 2, kurtosis) 
+) 
+
+#corelatia si covarinta
+a=cor(date1[,-1])
+b=cov(date1[,-1])
+
+# grafic corelatie
+corel=corrplot(a, method = "square", type = "upper") 
+
+#cerinta 7
+library("ggplot2")
+hist(date$x2, main="Histograma Rata de crestere a populatiei",col='cyan')
+lines(date$x2,col='red',lwd=3)
+windows()
+boxplot(date1[,-1], main="Boplot pentru setul de date", col="green")
+plot(date1[,-1])
+
+#CONTINUARE ANALIZA FACTORIALA 
+#Cerinta 8
+install.packages("psych")
+library(psych)
+#corelatie slaba se elimina variabila 9
+dateSTD1=dateSTD[,-9]
+K=KMO(dateSTD1)
+cortest.bartlett(dateSTD1)
+
+#Alegerea nr de factori
+#Criteriul1: screeplot
+screeplot=prcomp(dateSTD1)
+plot(screeplot,type="l",main="screeplot",col="red")
+
+#Critetriul lui kaiser
+acp=princomp(dateSTD1,cor=T)
+acp#valorii proprii
+
+sdev=acp$sdev
+val=sdev*sdev
+
+procent_info=(val/sum(val))*100
+procent_cumulat=cumsum(procent_info)
+x=data.frame(sdev,procent_info,procent_cumulat)
+
+#Estiaare
+#Metoda 1:Metoda axelor principale si digramele corespunzatoare
+library(GPArotation)
+factor1 <- fa(dateSTD1, nfactors = 9, rotate = "none", fm = "pa")
+print(factor1)
+print(factor1$loading,CUTOFF=0.4)
+
+fa.diagram(factor1)
+corrplot(factor1$loadings)
+
+#Metoda2:Metoda verosimilitati maxime
+factor2 <- fa(dateSTD1, nfactors = 9, rotate = "none", fm = "ml")
+print(factor2$loadings, cuttof=0.4)
+fa.diagram(factor2)
+factor2
+
+# Adaugă scorurile factorilor la setul de date
+dateSTD1_with_factors <- cbind(dateSTD1, factor1$scores)
+#3 tipuri de reprezentări grafice pentru analiza factorială
+# Scatterplot pentru primele 2 componente
+install.packages("pheatmap")
+library(pheatmap)
+pheatmap(factor1$loadings, scale = "row",
+         main = "Heatmap - Metoda PA (Încărcări Factorilor)")
+pheatmap(factor2$loadings, scale = "row",
+         main = "Heatmap - Metoda ML (Încărcări Factorilor)")
+
+corrplot(factor2$loadings)
+corrplot(factor1$loadings)
+
+plot(factor1$scores[, 1], factor1$scores[, 2],
+     xlab = "Factor 1", ylab = "Factor 2",
+     main = "Scatterplot - FA (Metoda PA)",
+     pch = 19, col = "blue")
+plot(factor2$scores[, 1], factor2$scores[, 2],
+     xlab = "Factor 1", ylab = "Factor 2",
+     main = "Scatterplot -  ml (Metoda ML)",
+     pch = 19, col = "green")
+
+#TEMA ANALIZA2 CORESPONDENTELOR
+library(FactoMineR)
+library(factoextra)
+library(gplots)
+dateCont=matrice_de_contingenta
+dateConti=dateCont[,-1]
+dateConti=as.table(as.matrix(dateConti))
+
+#Cerinta 3 - balloonplot
+par(mar=c(5, 5, 2, 2)) 
+balloonplot(t(dateConti), main="Matrice de contingenta", xlab="X-axis label", ylab="Y-axis label", label=T, show.margins=F)
+png("balloon_plot.png", width = 800, height = 600)
+balloonplot(t(dateConti), main="Matrice de contingenta", xlab="X-axis label", ylab="Y-axis label", label=T, show.margins=F)
+dev.off()
+
+#Cerinta 4 - chisq
+test1= chisq.test(dateConti)
+
+#Cerinta 5
+
+row_totals=rowSums(dateConti)
+col_totals=colSums(dateConti)
+#analiza corespondentelor
+rez=CA(dateConti, graph=F)
+rez
+eig=get_eigenvalue(rez)
+eig
+#total_inertia 
+s<- sum(eig[, 1])
+
+chi2=s*sum(as.matrix(dateConti))
+chi2
+
+summary(rez,nb.dec=2)
+rez$eig
+rez$row
+rez$col
+
+library(FactoMineR)
+library(factoextra)
+library(gplot)
+rez <- CA(dateConti, graph=F)
+fviz_screeplot(rez, addlabels = TRUE, ylim = c(0, 100))
+
+
+windows()
+corrplot(rez$col$contrib, is.corr=F)
+#Contributia coloanaerlor la cele doua dim
+fviz_contrib(rez, choice="col",axes=1:2)
+#Contributia coloanaerlor la cele doua dim
+
+corrplot(rez$row$contrib, is.corr=F)
+fviz_contrib(rez, choice="row",axes=1:2)
+friv_screeplot(rez)
+
+#biplot
+fviz_ca_biplot(rez)
+fviz_ca_biplot(rez,map="row principal",arrow=c(T,T), repel=T)
+
+#TEMA3
+dist_euclidian <- dist(dateSTD1, method = "euclidean")
+dist_manhattan <- dist(dateSTD1, method = "manhattan")
+ierarhie <- hclust(dist_euclidian, method = "single")
+windows()
+plot(ierarhie, main = "Dendrograma  metoda 1")
+
+ierarhie2 <- hclust(dist_euclidian, method = "average")
+plot(ierarhie2, main = "Dendrograma metoda 2")
+windows()
+ierarhie3 <- hclust(dist_euclidian, method = "ward.D2")
+plot(ierarhie2, main = "Dendrograma metoda 3")
+# Calcularea dendrogramei
+ierarhie3 <- hclust(dist_euclidian, method = "ward.D2")
+
+# Afișarea dendrogramei
+plot(ierarhie3, main = "Dendrograma metoda 3", xlab = "", sub = "", cex = 0.8)
+
+# Tăierea dendrogramei în clustere (de exemplu, 4 clustere)
+clusters <- cutree(ierarhie3, k = 4)
+
+# Evidențierea clusterelor în dendrogramă cu culori
+rect.hclust(ierarhie3, k = 4, border = c("red", "blue", "green", "purple"))
+
+
+clusters <- cutree(ierarhie3, k = 4)
+table(clusters)
+fviz_nbclust(dateSTD1, hcut, method = "silhouette") + ggtitle("Silhouette Method")
+fviz_nbclust(dateSTD1, hcut, method = "wss") + ggtitle("Elbow Method")
+
+#indicatori statistici
+
+
+
+#kmeans
+# Aplicarea algoritmului K-means pentru k = 4
+set.seed(123)  # Setarea semintei pentru reproducibilitate
+kmeans_result <- kmeans(dateSTD1, centers = 4, nstart = 25)
+
+# Afișarea output-ului principal
+cat("Centrele clusterelor:\n")
+print(kmeans_result$centers)
+
+cat("Numărul de observații în fiecare cluster:\n")
+print(table(kmeans_result$cluster))
+
+cat("Variabilitatea explicată de fiecare cluster (Inertia):\n")
+print(kmeans_result$tot.withinss)
+
+cat("Etichetele de cluster pentru fiecare observație:\n")
+print(kmeans_result$cluster)
+
+# Calcularea BSS, WSS și TSS
+TSS = sum((dateSTD1 - colMeans(dateSTD1))^2)
+WSS = kmeans_result$tot.withinss
+BSS = TSS - WSS
+
+cat("TSS (Total Sum of Squares):\n", TSS, "\n")
+cat("WSS (Within-cluster Sum of Squares):\n", WSS, "\n")
+cat("BSS (Between-cluster Sum of Squares):\n", BSS, "\n")
+
+# Verificarea calității pentru diferite valori ale lui k
+library(factoextra)
+fviz_nbclust(dateSTD1, kmeans, method = "silhouette") + ggtitle("Silhouette Method")
+fviz_nbclust(dateSTD1, kmeans, method = "wss") + ggtitle("Elbow Method")
+# Reprezentarea grafică a clusterelor pe primele 2 componente principale
+library(ggplot2)
+
+# Adăugăm etichetele de cluster la datele originale
+dateSTD1_with_clusters <- data.frame(dateSTD1, cluster = as.factor(kmeans_result$cluster))
+
+# Scatter plot pentru primele 2 variabile, colorate după clustere
+# Scatter plot pe primele 2 componente principale
+library(ggplot2)
+
+# Crearea unui data frame care include datele standardizate și etichetele de cluster
+dateSTD1_with_clusters <- data.frame(dateSTD1, cluster = as.factor(kmeans_result$cluster))
+
+# Plotarea datelor pe primele 2 componente principale
+ggplot(dateSTD1_with_clusters, aes(x = dateSTD1_with_clusters[,1], y = dateSTD1_with_clusters[,2], color = cluster)) +
+  geom_point(size = 3) +
+  labs(title = "Scatter Plot al Clusterelor K-means", x = "Componenta 1", y = "Componenta 2") +
+  scale_color_manual(values = c("red", "blue", "green", "purple")) +  # Alegerea culorilor pentru fiecare cluster
+  theme_minimal()
+
+# Reprezentarea clusterelor în biplot
+library(factoextra)
+
+# Vizualizarea clusterelor pe cele două prime componente principale
+fviz_cluster(kmeans_result, data = dateSTD1, 
+             ellipse.type = "norm", 
+             palette = c("red", "blue", "green", "purple"), 
+             ggtheme = theme_minimal(), 
+             main = "Biplot K-means Clusters")
