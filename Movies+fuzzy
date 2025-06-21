@@ -1,0 +1,369 @@
+
+#summary+clusterizare fuzzy
+statistici <- data.frame(
+  Variable = colnames(a)[-1],  
+  SD = apply(a[,-1], 2, sd),
+  Skewness = apply(a[,-1], 2, skewness),
+  Kurtosis = apply(a[,-1], 2, kurtosis),
+  Amplit = apply(a[,-1], 2, function(x) max(x) - min(x)),
+  CV = apply(a[,-1], 2, function(x) (sd(x) / mean(x)) * 100)
+)
+
+
+statistici
+
+library(sets)
+sets_options("univers", seq(from = 0, to = 25, by = 0.1))
+variabile=set(ratingCritici =fuzzy_partition(varnames = c(slaba = 0, buna = 5, excelenta = 10), sd = 1.5), 
+              calitatea = fuzzy_variable(proasta = fuzzy_trapezoid(corners = c(-2, 0, 2, 4)), 
+                                         buna = fuzzy_trapezoid(corners = c(7, 9, 11, 13))), 
+              popularitate = fuzzy_partition(varnames = c(nesemnificativ = 5, mediu = 12.5, semnificativ = 20), 
+                                             FUN = fuzzy_cone, radius = 5) )
+
+#Regulile fuzzy
+reguli <- set( fuzzy_rule(ratingCritici %is% slaba || calitatea %is% proasta, popularitate %is% nesemnificativ), 
+               fuzzy_rule(ratingCritici %is% buna, popularitate %is% mediu), fuzzy_rule(ratingCritici %is% excelenta || calitatea %is% 
+                                                                                          buna, popularitate %is% semnificativ) )
+sistem <- fuzzy_system(variabile, reguli)
+print(sistem)
+plot(sistem)
+fi <- fuzzy_inference(sistem, list(ratingCritici = 3, calitatea = 8))
+plot(fi)
+gset_defuzzify(fi, "centroid")
+
+movies=clean_movies
+head(movies)
+movies1=movies[,c(7,8,13,14,16)]
+#install.packages("e1071")
+library(e1071)
+
+set.seed(123)
+result<-cmeans(movies1,3,100,m=2, method="cmeans")   
+result
+
+plot(movies1$gross, movies1$`budget`, col=result$cluster)
+
+plot(movies1$gross, movies1$`budget`, col=result$cluster)
+points(result$centers[,c(1,5)],col=1:3,pch=8,cex=2)
+
+plot(movies1$gross, movies1$`budget`, col=result$cluster)
+points(result$centers[,c(1,5)],col=1:3,pch=8,cex=2)
+text(x=movies1$gross, y=movies1$`budget`, labels=clean_movies$name, col=result$cluster)
+
+o<-order(result$cluster)
+o
+
+data.frame(clean_movies$name[o],result$cluster[o])
+
+result$membership[1:3,]
+
+
+
+data.frame(clean_movies$name,result$cluster)
+plot(1:8, 1:8, col=1:8, pch=19, cex=3, xlab="", ylab="")
+
+
+library(cluster)
+movies1=movies[,c(2,7,8,13,14,16)]
+movies1
+res.fanny <- fanny(movies1, 3) 
+?fanny
+data.frame(res.fanny$clustering, movies1$name) 
+
+library(factoextra)
+fviz_cluster(res.fanny, ellipse.type = "norm", repel = TRUE, palette = "jco", ggtheme = theme_minimal(), legend = "right")
+?fviz_cluster 
+fviz_silhouette(res.fanny, palette = "jco", ggtheme = theme_minimal()) 
+
+?fviz_silhouette
+
+res.fanny$silinfo
+
+library(cluster)
+df <- scale(mtcars)
+df
+res.fanny <- fanny(df, 2) 
+res.fanny
+?fanny
+head(res.fanny$membership, 3)
+
+res.fanny$coeff
+
+
+head(res.fanny$clustering) 
+
+library(factoextra)
+fviz_cluster(res.fanny, ellipse.type = "norm", repel = TRUE, palette = "jco", ggtheme = theme_minimal(), legend = "right")
+
+fviz_silhouette(res.fanny, palette = "jco", ggtheme = theme_minimal())
+
+##########################################################################################3
+#regresii
+moviesH=clean_movies
+library(ggplot2)
+library(nnet)
+
+movies1=moviesH[,c(2,7,13,14,16,17)]
+plot<-ggplot(data=movies1, aes(x=movies1$gross, y=movies1$score, col=movies1$succes))
+plot<-plot+geom_point(aes(size=5))
+plot
+
+
+movies1$succes.f<-factor(movies1$succes)
+
+
+library(caTools)
+set.seed(83)
+
+split<-sample.split(movies1$succes.f,SplitRatio = 0.75)
+split
+
+setantrenare<-subset(movies1, split==TRUE)
+setantrenare
+
+#definim setul de testare
+settestare <-subset(movies1, split==FALSE)
+settestare
+
+#refacem graficul de mai sus
+plot<-ggplot(data=movies1, aes(x=movies1$gross, y=movies1$score), col=succes.f)
+plot<-plot+geom_point(aes(size=5))
+plot
+
+model<-glm(succes.f~gross+score, data=setantrenare, family = binomial)
+summary(model)
+
+exp(coef(model))
+contrasts(movies1$succes.f)
+
+prob<-predict(model, settestare, type='response')
+prob
+
+
+pred<-rep("0",dim(setantrenare)[1])
+pred[prob>0.5] ="1"
+
+table(pred, setantrenare$succes.f)
+
+
+predictie <-predict(model, newdata=data.frame(gross=c(34,35), score=c(50,55)), type="response")
+predictie
+predictie[1]<=0.5
+
+
+pred1<-rep("0", dim(settestare)[1])
+pred1[prob>.5]="1"
+
+
+table(pred1, settestare$succes.f)
+mean(pred1==settestare$succes.f)
+library(ROCR)
+
+(147+2646)/(147+2646+641+567)
+
+p<-predict(model, newdata=settestare, type="response")
+pr<-prediction(p, settestare$succes.f)
+prf<-performance(pr, measure="tpr", x.measure = "fpr")
+plot(prf)
+auc<-performance(pr, measure="auc")
+auc<-auc@y.values[[1]]
+auc
+
+
+## Regresia Multinomiala
+
+
+library(nnet)
+
+# Crearea variabilei factor conform regulilor date
+moviesH$scoreF <- cut(moviesH$score,
+                      breaks = c(-Inf, 3, 5, 7, Inf),
+                      labels = c("0", "1", "2", "3"),
+                      right = FALSE)
+
+library(nnet)
+mymodel <- multinom(scoreF ~ budget + votes + runtime, data = moviesH, trace = FALSE)
+
+summary(mymodel)
+a=exp(coef(mymodel))
+a
+predict(mymodel, moviesH)
+
+predict(mymodel, moviesH, type="prob")
+
+matriceconfuzie<-table(moviesH$scoreF[1:30], predict(mymodel)[1:30])
+matriceconfuzie
+
+mean(moviesH$scoreF[1:30] == predict(mymodel)[1:30])
+
+
+
+#########################################################################################################
+## Arbori de decizie
+movies2=clean_movies[,c(5,7,8,13,14,16,17)]
+library(ISLR)
+library(rpart)
+library(pROC)
+
+
+
+range(movies2$score) 
+hist(movies2$score) 
+
+High<-ifelse(movies2$score>7, 'Yes', "No")
+
+movies2$score<-NULL
+movies2<-data.frame(movies2, High)
+set.seed(144)
+antrenare<-sample(1:nrow(movies2), nrow(movies2)/2)
+setantrenare<-movies2[antrenare,]
+setantrenare
+settestare<-movies2[-antrenare,]
+settestare
+
+arbore<-rpart(setantrenare$High~., data=setantrenare, method="class")
+
+
+plot(arbore)
+text(arbore, pretty=0)
+library(rpart.plot)
+rpart.plot(arbore, extra=106)
+
+table(setantrenare$High)
+
+
+predictie<-predict(arbore, settestare, type="class")
+confuzie<-table(settestare$High, predictie)
+confuzie
+mean(predictie!=settestare$High)
+
+
+
+predictie1 <-predict(arbore, settestare, type="prob")
+predictie1
+curbaroc<-roc(settestare$High, predictie1[,"Yes"])
+plot(curbaroc)
+
+auc(curbaroc)
+plotcp(arbore)
+mincp<-arbore$cptable[which.min(arbore$cptable[,"xerror"]), "CP"]
+mincp
+
+printcp(arbore)
+
+arbore1<-prune(arbore, cp=arbore$cptable[which.min(arbore$cptable[,'xerror']),"CP"])
+rpart.plot(arbore1, extra=106)
+
+printcp(arbore1)
+
+predictie2<-predict(arbore1, settestare, type="class")
+predictie2
+
+
+
+confuzie<-table(settestare$High, predictie2)
+confuzie
+
+mean(predictie2!=settestare$High)
+
+
+predictie3<-predict(arbore1, settestare, type="prob")
+predictie3
+
+
+
+curbaroc1<-roc(settestare$High, predictie3[,"Yes"])
+plot(curbaroc1)
+
+auc(curbaroc1) #acuratete 76,16%
+
+
+########################################################################################################################
+#retele
+library(neuralnet)
+
+# Pregătim datele
+moviesH$scoreF <- cut(moviesH$score,
+                      breaks = c(-Inf, 3, 5, 7, Inf),
+                      labels = c("0", "1", "2", "3"),
+                      right = FALSE)
+
+# Set de antrenare (700 observații)
+itrain <- moviesH[sample(1:nrow(moviesH), 700),]
+
+itrain$A0 <- as.numeric(itrain$scoreF == "0")
+itrain$A1 <- as.numeric(itrain$scoreF == "1")
+itrain$A2 <- as.numeric(itrain$scoreF == "2")
+itrain$A3 <- as.numeric(itrain$scoreF == "3")
+
+# Verificăm coloanele
+head(itrain[, c("scoreF", "A1", "A2", "A3")])
+
+# Antrenăm rețeaua neuronală
+net <- neuralnet(A0+A1 + A2+ A3 ~ budget + votes + runtime,
+                 data = itrain,
+                 hidden = 3,
+                 linear.output = FALSE,
+                 stepmax = 1e6)
+
+# Vizualizare rețea
+plot(net, rep = "best", intercept = FALSE)
+
+predictie <- compute(net, moviesH[, c("budget", "votes", "runtime")])
+predictie
+
+grad_apartenență <- predictie$net.result
+rezultat<-0
+for(i in 1:5335)(rezultat[i]<-which.max(grad_apartenență))
+for(i in 1:5335){if(rezultat[i]==1){rezultat[i]="1"}}
+for(i in 1:5335){if(rezultat[i]==1){rezultat[i]="2"}}
+for(i in 1:5335){if(rezultat[i]==1){rezultat[i]="3"}}
+
+comparatie<-moviesH
+comparatie$Predicted<-rezultat
+comparatie
+head(comparatie)
+comparatie[1:18, c(1, 8)]
+
+tab<-table(comparatie$scoreF,comparatie$Predicted)
+
+library(e1071)
+classAgreement(tab)
+
+
+######################################################################################################################################
+#knn
+movies=clean_movies
+movies1 <- na.omit(movies)
+library(class)
+set.seed(123)
+movies1$scoreF <- cut(movies1$score,
+                      breaks = c(-Inf, 3, 5, 7, Inf),
+                      labels = c("0", "1", "2", "3"),
+                      right = FALSE)
+
+index <- sample(2, nrow(movies1), replace = TRUE, prob = c(0.8, 0.2))
+
+antrenare <- movies1[index == 1, 1:17]
+testare <- movies1[index == 2, 1:17]
+
+numeric_cols <- sapply(movies1[,1:17], is.numeric)
+antrenare <- movies1[index == 1, which(numeric_cols)]
+testare <- movies1[index == 2, which(numeric_cols)]
+
+eticheteleantrenare <- movies1$scoreF[index == 1]
+eticheteletestare <- movies1$scoreF[index == 2]
+
+
+
+dim(antrenare)[1]
+dim(testare)[1]
+
+predictieKnn <- knn(train = antrenare,
+                    test = testare,
+                    cl = eticheteleantrenare,
+                    k = 3)
+
+matrice_confuzie <- table(Real = eticheteletestare, Predictie = predictieKnn)
+print(matrice_confuzie)
+mean(eticheteletestare!=predictieKnn)
